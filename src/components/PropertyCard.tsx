@@ -1,13 +1,16 @@
-import { BedDouble, Bath, Ruler, Heart, MapPin, CalendarDays } from 'lucide-react'
+import { BedDouble, Bath, Ruler, Heart, MapPin, CalendarDays, GitCompare, Flame } from 'lucide-react'
 import { Link } from 'react-router'
 import type { Property } from '@/types'
 import { calcMortgage, fmtUSD } from '@/lib/mortgage'
 import { useMarketplace } from '@/context/MarketplaceContext'
+import { computeHotScore } from '@/lib/hotScore'
 import { cn } from '@/lib/utils'
 
 export default function PropertyCard({ property }: { property: Property }) {
-  const { isFavorite, toggleFavorite } = useMarketplace()
+  const { isFavorite, toggleFavorite, isInCompare, toggleCompare } = useMarketplace()
   const fav = isFavorite(property.id)
+  const comparing = isInCompare(property.id)
+  const hot = computeHotScore(property)
   const est = calcMortgage({
     homePrice: property.price,
     downPaymentPct: 20,
@@ -34,7 +37,7 @@ export default function PropertyCard({ property }: { property: Property }) {
         </Link>
 
         {/* top-left: badges */}
-        <div className="absolute left-3 top-3 flex gap-1.5">
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           {property.isNew && (
             <span className="rounded-md bg-brass-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
               New
@@ -43,19 +46,36 @@ export default function PropertyCard({ property }: { property: Property }) {
           <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-700 shadow">
             {property.type}
           </span>
+          {hot.label === 'Hot Home' && (
+            <span className={cn('flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider shadow', hot.badgeColor)}>
+              <Flame className="h-2.5 w-2.5" /> {hot.label}
+            </span>
+          )}
         </div>
 
-        {/* top-right: save */}
-        <button
-          onClick={() => toggleFavorite(property.id)}
-          aria-label={fav ? 'Remove from saved homes' : 'Save this home'}
-          className={cn(
-            'absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all duration-200 hover:scale-110',
-            fav ? 'bg-rose-500 text-white' : 'bg-white/95 text-stone-500 hover:text-rose-500',
-          )}
-        >
-          <Heart className={cn('h-4 w-4', fav && 'fill-current')} />
-        </button>
+        {/* top-right: actions */}
+        <div className="absolute right-3 top-3 flex gap-1.5">
+          <button
+            onClick={() => toggleCompare(property.id)}
+            aria-label={comparing ? 'Remove from comparison' : 'Add to comparison'}
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all duration-200 hover:scale-110',
+              comparing ? 'bg-forest-800 text-cream' : 'bg-white/95 text-stone-500 hover:text-forest-700',
+            )}
+          >
+            <GitCompare className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => toggleFavorite(property.id)}
+            aria-label={fav ? 'Remove from saved homes' : 'Save this home'}
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all duration-200 hover:scale-110',
+              fav ? 'bg-rose-500 text-white' : 'bg-white/95 text-stone-500 hover:text-rose-500',
+            )}
+          >
+            <Heart className={cn('h-4 w-4', fav && 'fill-current')} />
+          </button>
+        </div>
 
         {/* bottom row: price left, open house right */}
         <div className="pointer-events-none absolute inset-x-4 bottom-3.5 flex items-end justify-between gap-3">

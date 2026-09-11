@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Camera, Handshake, LineChart, SearchCheck } from 'lucide-react'
+import { Camera, Handshake, LineChart, Loader as Loader2, SearchCheck, Send } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { fmtUSD } from '@/lib/mortgage'
+import { supabase } from '@/lib/supabaseClient'
+import { PROPERTY_TYPES, type PropertyType } from '@/types'
 
 const MARKETS: { name: string; ppsqft: number }[] = [
   { name: 'Bellevue, WA', ppsqft: 520 },
@@ -39,6 +42,18 @@ export default function SellPage() {
   const [baths, setBaths] = useState(2)
   const [year, setYear] = useState(1998)
   const [condition, setCondition] = useState(CONDITIONS[1].name)
+  const [showSubmit, setShowSubmit] = useState(false)
+  const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [submitError, setSubmitError] = useState('')
+  const [sellerForm, setSellerForm] = useState({
+    title: '',
+    address: '',
+    seller_name: '',
+    seller_email: '',
+    seller_phone: '',
+    property_type: 'House' as PropertyType,
+    description: '',
+  })
 
   const estimate = useMemo(() => {
     const m = MARKETS.find((x) => x.name === market)!
@@ -126,12 +141,182 @@ export default function SellPage() {
             <p className="mt-2 text-sm text-stone-400">
               Likely range {fmtUSD(Math.round(estimate.low))} – {fmtUSD(Math.round(estimate.high))}
             </p>
-            <button className="mt-6 rounded-xl bg-brass-500 px-4 py-3 text-sm font-bold text-forest-950 transition-colors hover:bg-brass-400">
-              Get a full market report
+            <button
+              onClick={() => setShowSubmit(true)}
+              className="mt-6 rounded-xl bg-brass-500 px-4 py-3 text-sm font-bold text-forest-950 transition-colors hover:bg-brass-400"
+            >
+              List my home for sale
             </button>
             <p className="mt-3 text-xs text-stone-500">Free, no obligation · prepared by a local advisor</p>
           </div>
         </section>
+
+        {/* Listing submission */}
+        {showSubmit && submitState !== 'success' && (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">
+            <div className="border-b border-stone-200/80 bg-stone-50 px-7 py-5">
+              <h2 className="font-display text-2xl font-bold text-stone-900">List your home for sale</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Your estimated value is {fmtUSD(Math.round(estimate.mid))}. Fill in the details below and a Nestora agent will review your listing within two business days.
+              </p>
+            </div>
+            <form
+              className="grid gap-4 p-7 sm:grid-cols-2"
+              onSubmit={async (e) => {
+                e.preventDefault()
+                setSubmitState('submitting')
+                setSubmitError('')
+                const { error } = await supabase.from('listings').insert({
+                  title: sellerForm.title,
+                  address: sellerForm.address,
+                  city: market.split(',')[0].trim(),
+                  state: market.split(',')[1]?.trim() ?? '',
+                  price: Math.round(estimate.mid),
+                  beds,
+                  baths,
+                  sqft,
+                  lot_sqft: null,
+                  property_type: sellerForm.property_type,
+                  year_built: year,
+                  description: sellerForm.description,
+                  image_url: null,
+                  seller_name: sellerForm.seller_name,
+                  seller_email: sellerForm.seller_email,
+                  seller_phone: sellerForm.seller_phone || null,
+                  status: 'pending',
+                })
+                if (error) {
+                  setSubmitState('error')
+                  setSubmitError(error.message)
+                } else {
+                  setSubmitState('success')
+                }
+              }}
+            >
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Listing title</label>
+                <Input
+                  required
+                  placeholder="e.g. Maple Grove Modern"
+                  value={sellerForm.title}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Street address</label>
+                <Input
+                  required
+                  placeholder="123 Main St"
+                  value={sellerForm.address}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, address: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Property type</label>
+                <Select
+                  value={sellerForm.property_type}
+                  onValueChange={(v) => setSellerForm((f) => ({ ...f, property_type: v as PropertyType }))}
+                >
+                  <SelectTrigger className="h-10 w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PROPERTY_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Market</label>
+                <p className="flex h-10 items-center rounded-md border border-stone-200 bg-stone-50 px-3 text-sm text-stone-600">{market}</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Your name</label>
+                <Input
+                  required
+                  placeholder="Jane Doe"
+                  value={sellerForm.seller_name}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, seller_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Email</label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="jane@example.com"
+                  value={sellerForm.seller_email}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, seller_email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Phone (optional)</label>
+                <Input
+                  type="tel"
+                  placeholder="(415) 555-0182"
+                  value={sellerForm.seller_phone}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, seller_phone: e.target.value }))}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">Description</label>
+                <Textarea
+                  required
+                  rows={4}
+                  placeholder="Tell buyers what makes your home special..."
+                  value={sellerForm.description}
+                  onChange={(e) => setSellerForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              {submitState === 'error' && (
+                <p className="sm:col-span-2 text-sm font-medium text-rose-600">
+                  {submitError || 'Something went wrong submitting your listing. Please try again.'}
+                </p>
+              )}
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={submitState === 'submitting'}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest-800 px-4 py-3 text-sm font-bold text-cream transition-colors hover:bg-forest-900 disabled:opacity-60"
+                >
+                  {submitState === 'submitting' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Submit listing for review
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {submitState === 'success' && (
+          <section className="mt-8 rounded-2xl border border-forest-200 bg-forest-50 p-8 text-center shadow-sm">
+            <h2 className="font-display text-2xl font-bold text-forest-900">Listing submitted!</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-forest-800">
+              Your home at {fmtUSD(Math.round(estimate.mid))} has been sent to a Nestora agent for review.
+              You'll hear back within two business days. Once approved, it will appear in the marketplace.
+            </p>
+            <button
+              onClick={() => {
+                setSubmitState('idle')
+                setShowSubmit(false)
+                setSellerForm({
+                  title: '',
+                  address: '',
+                  seller_name: '',
+                  seller_email: '',
+                  seller_phone: '',
+                  property_type: 'House',
+                  description: '',
+                })
+              }}
+              className="mt-5 rounded-xl border border-forest-300 bg-white px-5 py-2.5 text-sm font-semibold text-forest-800 transition-colors hover:bg-forest-100"
+            >
+              Submit another listing
+            </button>
+          </section>
+        )}
 
         {/* Steps */}
         <section className="mt-20">

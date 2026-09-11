@@ -12,6 +12,10 @@ interface MarketplaceState {
   deleteSearch: (id: string) => void
   toggleSearchAlerts: (id: string) => void
   matchCount: (filters: SearchFilters) => number
+  compareList: string[]
+  toggleCompare: (id: string) => void
+  isInCompare: (id: string) => boolean
+  clearCompare: () => void
 }
 
 const MarketplaceContext = createContext<MarketplaceState | null>(null)
@@ -52,6 +56,7 @@ export function filterProperties(filters: SearchFilters, list: Property[] = PROP
 export function MarketplaceProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useLocalStorage<string[]>('nestora:favorites', [])
   const [savedSearches, setSavedSearches] = useLocalStorage<SavedSearch[]>('nestora:saved-searches', [])
+  const [compareList, setCompareList] = useLocalStorage<string[]>('nestora:compare', [])
 
   const toggleFavorite = useCallback(
     (id: string) => {
@@ -89,6 +94,19 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
 
   const matchCount = useCallback((filters: SearchFilters) => filterProperties({ ...DEFAULT_FILTERS, ...filters }).length, [])
 
+  const toggleCompare = useCallback(
+    (id: string) => {
+      setCompareList((prev) =>
+        prev.includes(id) ? prev.filter((c) => c !== id) : prev.length >= 3 ? prev : [...prev, id],
+      )
+    },
+    [setCompareList],
+  )
+
+  const isInCompare = useCallback((id: string) => compareList.includes(id), [compareList])
+
+  const clearCompare = useCallback(() => setCompareList([]), [setCompareList])
+
   const value = useMemo(
     () => ({
       favorites,
@@ -99,8 +117,12 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
       deleteSearch,
       toggleSearchAlerts,
       matchCount,
+      compareList,
+      toggleCompare,
+      isInCompare,
+      clearCompare,
     }),
-    [favorites, toggleFavorite, isFavorite, savedSearches, saveSearch, deleteSearch, toggleSearchAlerts, matchCount],
+    [favorites, toggleFavorite, isFavorite, savedSearches, saveSearch, deleteSearch, toggleSearchAlerts, matchCount, compareList, toggleCompare, isInCompare, clearCompare],
   )
 
   return <MarketplaceContext.Provider value={value}>{children}</MarketplaceContext.Provider>

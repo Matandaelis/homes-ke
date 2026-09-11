@@ -26,19 +26,19 @@ export default function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm">
             <li><Link to="/" className="hover:text-cream">Buy a home</Link></li>
             <li><Link to="/sell" className="hover:text-cream">Sell your home</Link></li>
+            <li><Link to="/compare" className="hover:text-cream">Compare homes</Link></li>
+            <li><Link to="/insights" className="hover:text-cream">Market insights</Link></li>
+            <li><Link to="/affordability" className="hover:text-cream">Affordability calculator</Link></li>
             <li><Link to="/mortgage" className="hover:text-cream">Mortgage calculator</Link></li>
-            <li><Link to="/pipeline" className="hover:text-cream">Agent pipeline</Link></li>
-            <li><Link to="/saved" className="hover:text-cream">Saved searches</Link></li>
           </ul>
         </div>
 
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-brass-300">Popular cities</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-brass-300">Agent tools</h3>
           <ul className="mt-4 space-y-2.5 text-sm">
-            <li><Link to="/?q=Portland" className="hover:text-cream">Portland, OR</Link></li>
-            <li><Link to="/?q=Scottsdale" className="hover:text-cream">Scottsdale, AZ</Link></li>
-            <li><Link to="/?q=Miami" className="hover:text-cream">Miami, FL</Link></li>
-            <li><Link to="/?q=Palm Springs" className="hover:text-cream">Palm Springs, CA</Link></li>
+            <li><Link to="/manage" className="hover:text-cream">Listing management</Link></li>
+            <li><Link to="/pipeline" className="hover:text-cream">Lead & offer pipeline</Link></li>
+            <li><Link to="/saved" className="hover:text-cream">Saved searches</Link></li>
           </ul>
         </div>
 

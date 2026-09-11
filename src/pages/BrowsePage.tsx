@@ -5,6 +5,7 @@ import { DEFAULT_FILTERS, PROPERTY_TYPES, type PropertyType, type SearchFilters 
 import { PROPERTIES } from '@/data/properties'
 import { filterProperties } from '@/context/MarketplaceContext'
 import { fmtCompact } from '@/lib/mortgage'
+import { useListings } from '@/hooks/useListings'
 import FilterBar from '@/components/FilterBar'
 import PropertyCard from '@/components/PropertyCard'
 
@@ -25,6 +26,8 @@ export default function BrowsePage() {
   }))
   const [heroQuery, setHeroQuery] = useState('')
   const listingsRef = useRef<HTMLDivElement>(null)
+  const { properties: dbProperties } = useListings('active')
+  const allProperties = useMemo(() => [...dbProperties, ...PROPERTIES], [dbProperties])
 
   // Applying a saved search navigates here with filters in location.state
   useEffect(() => {
@@ -35,11 +38,11 @@ export default function BrowsePage() {
     }
   }, [location.state])
 
-  const results = useMemo(() => filterProperties(filters), [filters])
-  const cities = useMemo(() => new Set(PROPERTIES.map((p) => p.city)).size, [])
+  const results = useMemo(() => filterProperties(filters, allProperties), [filters, allProperties])
+  const cities = useMemo(() => new Set(allProperties.map((p) => p.city)).size, [allProperties])
   const avgPpsf = useMemo(
-    () => Math.round(PROPERTIES.reduce((s, p) => s + p.pricePerSqft, 0) / PROPERTIES.length),
-    [],
+    () => Math.round(allProperties.reduce((s, p) => s + p.pricePerSqft, 0) / (allProperties.length || 1)),
+    [allProperties],
   )
 
   const applyHeroSearch = () => {
@@ -88,7 +91,7 @@ export default function BrowsePage() {
 
           <div className="mt-12 grid grid-cols-3 gap-8 sm:gap-16">
             {[
-              { v: String(PROPERTIES.length), l: 'Curated listings' },
+              { v: String(allProperties.length), l: 'Curated listings' },
               { v: String(cities), l: 'Cities covered' },
               { v: `$${avgPpsf}`, l: 'Avg $/sqft' },
             ].map((s) => (
@@ -111,7 +114,7 @@ export default function BrowsePage() {
         </div>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {PROPERTY_TYPES.map((t) => {
-            const count = PROPERTIES.filter((p) => p.type === t).length
+            const count = allProperties.filter((p) => p.type === t).length
             const active = filters.type === t
             return (
               <button

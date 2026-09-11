@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BedDouble, Bath, Ruler, Heart, MapPin, CalendarDays, Check, Hop as Home, Landmark, Phone, Mail, Send, Trees, Hammer, Signature as FileSignature, Loader as Loader2 } from 'lucide-react'
+import { ArrowLeft, BedDouble, Bath, Ruler, Heart, MapPin, CalendarDays, Check, Hop as Home, Landmark, Phone, Mail, Send, Trees, Hammer, Signature as FileSignature, Loader as Loader2, GitCompare } from 'lucide-react'
 import { PROPERTIES } from '@/data/properties'
 import { calcMortgage, fmtUSD } from '@/lib/mortgage'
 import { useMarketplace } from '@/context/MarketplaceContext'
@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import PropertyCard from '@/components/PropertyCard'
 import { supabase } from '@/lib/supabaseClient'
+import { useListingById } from '@/hooks/useListings'
+import type { Property } from '@/types'
 import { cn } from '@/lib/utils'
 
 type TourState = 'idle' | 'submitting' | 'success' | 'error'
@@ -18,8 +20,10 @@ type OfferState = 'idle' | 'submitting' | 'success' | 'error'
 export default function PropertyDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const property = PROPERTIES.find((p) => p.id === id)
-  const { isFavorite, toggleFavorite } = useMarketplace()
+  const staticProperty = PROPERTIES.find((p) => p.id === id)
+  const { property: dbProperty, loading: dbLoading } = useListingById(staticProperty ? undefined : id)
+  const property: Property | null = staticProperty ?? dbProperty ?? null
+  const { isFavorite, toggleFavorite, isInCompare, toggleCompare } = useMarketplace()
   const [activeImg, setActiveImg] = useState(0)
   const [downPct, setDownPct] = useState(20)
   const [rate, setRate] = useState(6.5)
@@ -57,6 +61,13 @@ export default function PropertyDetailPage() {
   )
 
   if (!property) {
+    if (dbLoading) {
+      return (
+        <main className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6">
+          <p className="text-stone-500">Loading listing…</p>
+        </main>
+      )
+    }
     return (
       <main className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6">
         <h1 className="font-display text-3xl font-bold text-stone-900">Listing not found</h1>
@@ -69,6 +80,7 @@ export default function PropertyDetailPage() {
   }
 
   const fav = isFavorite(property.id)
+  const comparing = isInCompare(property.id)
   const similar = PROPERTIES.filter((p) => p.id !== property.id && (p.type === property.type || p.state === property.state)).slice(0, 3)
 
   const facts = [
@@ -148,6 +160,16 @@ export default function PropertyDetailPage() {
             <p className="font-display text-3xl font-bold text-forest-900">{fmtUSD(property.price)}</p>
             <p className="text-sm text-stone-500">Est. {fmtUSD(Math.round(est.monthlyTotal))}/mo</p>
           </div>
+          <button
+            onClick={() => toggleCompare(property.id)}
+            className={cn(
+              'flex h-12 w-12 items-center justify-center rounded-full border shadow-sm transition-all hover:scale-105',
+              comparing ? 'border-forest-200 bg-forest-800 text-cream' : 'border-stone-200 bg-white text-stone-500 hover:text-forest-700',
+            )}
+            aria-label={comparing ? 'Remove from comparison' : 'Add to comparison'}
+          >
+            <GitCompare className="h-5 w-5" />
+          </button>
           <button
             onClick={() => toggleFavorite(property.id)}
             className={cn(
